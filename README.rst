@@ -1,3 +1,10 @@
+changes -- by A. Till
+---------------------
+
+The nuclear wallet cards data are incomplete. I have switched the entries for 97-Bk-248 and 97-Bk-248M. Further, I have added a constraint to nuclide_data.py that ignores entries in nuclear-wallet-cards.txt.gz that claim to be metastable (non-ground) states but have zero excitation energy. This is because these lines were corrupting the ground-state entries.
+
+You might want to check out https://github.com/kmiernik/Chart-of-nuclides-drawer
+
 nuclide-data -- a Python interface to nuclide data
 --------------------------------------------------
 

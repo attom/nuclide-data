@@ -29,7 +29,7 @@ mev_per_c_2_amu = 1. / 931.494061
 
 
 
-    
+
 
 # NIST data -------------------------------------------------------------
 def split_line(line):
@@ -42,7 +42,7 @@ def parse_one_chunk(chunk):
         if v.find('.') >= 0:
             if v.endswith('#'):
                 v = v[:-1]
-            d[k] = unc.ufloat(v)
+            d[k] = unc.ufloat_fromstr(v)
         else:
             try:
                 d[k] = int(v)
@@ -101,12 +101,12 @@ for Z in nist_per_element:
 
 def nndc_unc(string, delimiter):
     a, b = map(float, string.split(delimiter))
-    return unc.ufloat((a,b))
+    return unc.ufloat(a,b)
 
 def nndc_abun(string, delimiter):
     a, b = string.split(delimiter)
     unc_string = "{0}({1})".format(float(a), int(b))
-    return unc.ufloat(unc_string)
+    return unc.ufloat_fromstr(unc_string)
 
 def do_if_present(string, func, default=None):
     string = string.strip()
@@ -114,7 +114,7 @@ def do_if_present(string, func, default=None):
         return func(string)
     else:
         return default
-    
+
 def process_branch(s):
     try:
         return float(s) / 100.
@@ -123,19 +123,20 @@ def process_branch(s):
 
 def process_abundance(s):
     if s.startswith('100'):
-        return 1.
+        return unc.ufloat(1.0,0.0)
     else:
         return nndc_abun(s,'%') / 100.
 
 def parse_one_wallet_line(line):
     d = {}
     d['A'] = int(line[1:4])
+    M = line[4].strip()
     d['Z'] = int(line[6:9])
     d['symbol'] = line[10:12].strip().title()
 
-    d['mass excess'] = unc.ufloat(map(float, (line[97:105], line[105:113]))) # in MeV
+    d['mass excess'] = unc.ufloat(*map(float, (line[97:105], line[105:113]))) # in MeV
     d['systematics mass'] = (line[114] == 'S')
-    d['abundance'] = do_if_present(line[81:96], process_abundance, default=0.)
+    d['abundance'] = do_if_present(line[81:96], process_abundance, default=unc.ufloat(0.0,0.0))
 
     d['Jpi'] = line[16:26].strip()
 
@@ -152,9 +153,13 @@ def parse_one_wallet_line(line):
 
     if d['stable']: d['half-life'] = np.inf
 
-    return d
+    # TILL: If the line should be a metastable state but does not have excitation energy, it is unusable.
+    if M == 'M' and d['excitation energy'] == 0.0:
+        return None
+    else:
+        return d
 
-
+        
 wallet_filename = os.path.join(basepath, 'nuclear-wallet-cards.txt.gz')
 wallet_file = gzip.open(wallet_filename, 'rb')
 wallet_content = wallet_file.read()
@@ -164,8 +169,10 @@ wallet_lines = wallet_content.split('\n')[:-1]
 
 wallet_nuclide_processed_list = []
 for line in wallet_lines:
-    wallet_nuclide_processed_list.append( parse_one_wallet_line(line) )
+    # TILL: d now may be None 
     d = parse_one_wallet_line(line)
+    if d is not None:
+        wallet_nuclide_processed_list.append(d)
 
 
 isomer_keys = ['symbol', 'mass excess', 'abundance', 'isomeric',
@@ -212,6 +219,32 @@ for el in wallet_nuclide_processed_list:
     for k in decay_keys:
         isomer['decay modes'][el['decay mode']][k] = el[k]
 
+#TILL >>>
+#numGood = 0
+#numBad = 0
+#numFixed = 0
+#for (Z,A) in sorted(nuclides.keys()):
+#    for E in sorted(nuclides[(Z,A)].keys()):
+#        isomer = nuclides[(Z,A)][E]
+#        branchTotal = 0.
+#        decayModes = isomer['decay modes']
+#        for decayMode in decayModes.values():
+#            branchFraction = decayMode['branch fraction']
+#            if branchFraction:
+#                branchTotal += branchFraction
+#        if not(isomer['stable']) and (branchTotal < 0.9 or branchTotal > 1.1):
+#            print(Z, A, E, branchTotal)
+#            if 'SF' in decayModes:
+#                del decayModes['SF']
+#                numFixed += 1
+#            else:
+#                numBad += 1
+#        else:
+#            numGood += 1
+#print('{0} good, {1} bad, {2} fixed'.format(numGood, numBad, numFixed))
+#<<< TILL
+
+    
 
 default_isomer_E = {}
 meta_suffixes = 'mnopqrs'
@@ -247,11 +280,11 @@ def return_nominal_value(Z_or_symbol, A, E, attribute):
             Z = sym2z[Z_or_symbol.title()]
     except AttributeError:
         Z = Z_or_symbol
-   
+
     # testing for no A, then return elemental value
     if A is None:
         return atomic_weights[Z].nominal_value
-        
+
     try:
         return nuclides[(Z,A)][E][attribute].nominal_value
     except (ValueError, AttributeError):
@@ -291,7 +324,7 @@ for (Z,A) in nuclides:
 
     if not (Z in isotopes):
         isotopes[Z] = []
-    
+
     isotopes[Z].append(copy.copy(A))
 
     isotopes[Z].sort()
@@ -345,8 +378,8 @@ class Nuclide:
        * Alphanumeric: 'U235', 'U-235', '235U', '235-U'
            -- letters may be lower or uppercase
        * ZAID: 92235, "92235"
-       * Tuple/list: (92, 235), [92, 235] 
-       * Tuple/list with energy: (92, 235, 0.5), [92, 235, 0.5] 
+       * Tuple/list: (92, 235), [92, 235]
+       * Tuple/list with energy: (92, 235, 0.5), [92, 235, 0.5]
        * Dictionary: {'Z':92, 'A':235}
        * Object x with x.Z and x.A integer attributes
        * Metastable, only as "Am242m" or "AM-242M"
@@ -405,7 +438,7 @@ class Nuclide:
                         nuc_id = nuc_id.upper()
 
                         # Metastable
-                        if ( nuc_id[0] in string.ascii_letters 
+                        if ( nuc_id[0] in string.ascii_letters
                                           and nuc_id[-1] == 'M'):
                             metastable = True
                             nuc_id = nuc_id[:-1]
@@ -419,7 +452,7 @@ class Nuclide:
                         else:
                             s1 = filter(lambda x: x in string.ascii_letters, nuc_id)
                             s2 = filter(lambda x: not (x in string.ascii_letters), nuc_id).strip()
-                            
+
 
                         # Not sure of the order of s1 & s2,
                         #  so try one, then the other.
@@ -429,11 +462,11 @@ class Nuclide:
                         except:
                             self.Z = sym2z[s2.title()]
                             self.A = int(s1)
-                                
-                        
+
+
                     else: # assume it is a ZAID string
                         self.Z, self.A = zaid2za(nuc_id)
-        
+
         # Metastable can be specified by either E or metastable flag.
         #  If flag is given but E is not, then set E to inf as
         #  an indication that it is not stable, but that the exact
@@ -449,11 +482,11 @@ class Nuclide:
         self.element = z2sym[self.Z]
 
         # Assign E for list of metastable nuclides if E wasn't provided
-        if (self.E is np.inf and 
+        if (self.E is np.inf and
                self.__repr__() in default_isomer_E.keys()):
             self.E = default_isomer_E[self.__repr__()]
-            
-            
+
+
         try:
             self.weight = return_nominal_value(self.Z, self.A, self.E, 'weight')
         except:
