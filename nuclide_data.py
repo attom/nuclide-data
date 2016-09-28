@@ -159,7 +159,7 @@ def parse_one_wallet_line(line):
     else:
         return d
 
-        
+
 wallet_filename = os.path.join(basepath, 'nuclear-wallet-cards.txt.gz')
 wallet_file = gzip.open(wallet_filename, 'rb')
 wallet_content = wallet_file.read()
@@ -169,7 +169,7 @@ wallet_lines = wallet_content.split('\n')[:-1]
 
 wallet_nuclide_processed_list = []
 for line in wallet_lines:
-    # TILL: d now may be None 
+    # TILL: d now may be None
     d = parse_one_wallet_line(line)
     if d is not None:
         wallet_nuclide_processed_list.append(d)
@@ -244,7 +244,7 @@ for el in wallet_nuclide_processed_list:
 #print('{0} good, {1} bad, {2} fixed'.format(numGood, numBad, numFixed))
 #<<< TILL
 
-    
+
 
 default_isomer_E = {}
 meta_suffixes = 'mnopqrs'
@@ -366,6 +366,10 @@ def weight(Z_or_symbol, A=None, E=0.):
     """
     Return atomic weight for Z, A, and (optionally) E of isomeric state.
     """
+    # Workaround for nuclides that use A+400 to indicate metastable
+    # instead of using E > 0
+    if A is not None and A>400:
+        A = A % 400
     return return_nominal_value(Z_or_symbol, A, E, 'weight')
 
 
