@@ -33,7 +33,7 @@ mev_per_c_2_amu = 1. / 931.494061
 
 # NIST data -------------------------------------------------------------
 def split_line(line):
-    return map(str.strip, line.split('='))
+    return list(map(str.strip, line.split('=')))
 
 def parse_one_chunk(chunk):
     d = {}
@@ -100,7 +100,7 @@ for Z in nist_per_element:
 # Nuclear wallet cards data ------------------------------
 
 def nndc_unc(string, delimiter):
-    a, b = map(float, string.split(delimiter))
+    a, b = list(map(float, string.split(delimiter)))
     return unc.ufloat(a,b)
 
 def nndc_abun(string, delimiter):
@@ -134,7 +134,7 @@ def parse_one_wallet_line(line):
     d['Z'] = int(line[6:9])
     d['symbol'] = line[10:12].strip().title()
 
-    d['mass excess'] = unc.ufloat(*map(float, (line[97:105], line[105:113]))) # in MeV
+    d['mass excess'] = unc.ufloat(*list(map(float, (line[97:105], line[105:113])))) # in MeV
     d['systematics mass'] = (line[114] == 'S')
     d['abundance'] = do_if_present(line[81:96], process_abundance, default=unc.ufloat(0.0,0.0))
 
@@ -165,12 +165,12 @@ wallet_file = gzip.open(wallet_filename, 'rb')
 wallet_content = wallet_file.read()
 wallet_file.close()
 
-wallet_lines = wallet_content.split('\n')[:-1]
+wallet_lines = wallet_content.split('\n'.encode())[:-1]
 
 wallet_nuclide_processed_list = []
 for line in wallet_lines:
     # TILL: d now may be None
-    d = parse_one_wallet_line(line)
+    d = parse_one_wallet_line(line.decode())
     if d is not None:
         wallet_nuclide_processed_list.append(d)
 
@@ -249,7 +249,7 @@ for el in wallet_nuclide_processed_list:
 default_isomer_E = {}
 meta_suffixes = 'mnopqrs'
 for n in nuclides:
-    Es = nuclides[n].keys()
+    Es = list(nuclides[n].keys())
 
     if n[0] == 0: continue
 
@@ -357,7 +357,7 @@ def isomers(Z, A):
 
     Energies in MeV.
     """
-    isom = nuclides[(Z,A)].keys()
+    isom = list(nuclides[(Z,A)].keys())
     isom.sort()
     return isom
 
@@ -454,7 +454,7 @@ class Nuclide:
                             s1 = s1.strip()
                             s2 = s2.strip()
                         else:
-                            s1 = filter(lambda x: x in string.ascii_letters, nuc_id)
+                            s1 = [x for x in nuc_id if x in string.ascii_letters]
                             s2 = filter(lambda x: not (x in string.ascii_letters), nuc_id).strip()
 
 
@@ -487,7 +487,7 @@ class Nuclide:
 
         # Assign E for list of metastable nuclides if E wasn't provided
         if (self.E is np.inf and
-               self.__repr__() in default_isomer_E.keys()):
+               self.__repr__() in list(default_isomer_E.keys())):
             self.E = default_isomer_E[self.__repr__()]
 
 

@@ -1,1 +1,1 @@
-from nuclide_data import *
+from .nuclide_data import *

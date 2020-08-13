@@ -7,17 +7,17 @@ Tests for nuclide_data
 import numpy as np
 import uncertainties as unc
 
-import nuclide_data
+from . import nuclide_data
 
 
 def test_isotopes():
     """Do we have the correct isotopes for select elements?"""
 
     zs = [1, 8, 56, 95]
-    isos = [range(1, 8), 
-            range(12, 29),
-            range(112, 154),
-            range(230, 250),]
+    isos = [list(range(1, 8)), 
+            list(range(12, 29)),
+            list(range(112, 154)),
+            list(range(230, 250)),]
     for z, ref_iso in zip(zs, isos):
         iso = nuclide_data.isotopes[z]
         assert ref_iso == iso
