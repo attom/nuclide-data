@@ -86,7 +86,7 @@ for nuclide in nist_nuclide_processed_list:
     nist_nuclides[(Z,A)] = nuclide
 
 z2sym = dict(
-          [ (Z, nist_per_element[Z][0]['Atomic Symbol']) for Z in range(1,119) ]
+          [ (Z, nist_per_element[Z][0]['Atomic Symbol']) for Z in range(0,119) ]
             )
 
 sym2z = dict( [ (z2sym[k], k) for k in z2sym ] )
