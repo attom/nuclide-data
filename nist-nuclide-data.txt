@@ -1,3 +1,11 @@
+Atomic Number = 0
+Atomic Symbol = n
+Mass Number = 1
+Relative Atomic Mass = 1.00866491597(43)
+Isotopic Composition = 1.000000(0)
+Standard Atomic Weight = 1.00866491597(43)
+Notes = 
+
 Atomic Number = 1
 Atomic Symbol = H
 Mass Number = 1
